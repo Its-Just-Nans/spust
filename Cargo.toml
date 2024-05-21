@@ -14,3 +14,8 @@ repository = "https://github.com/Its-Just-Nans/spust"
 tower-http = { version = "0.5.1", features = ["fs"] }
 axum = { version = "0.7.4", features = ["multipart"] }
 tokio = { version = "1.35.1", features = ["full"] }
+env_logger = "0.11.3"
+log = "0.4.21"
+sha2 = "0.10.8"
+hex = "0.4.3"
+chrono = "0.4.38"

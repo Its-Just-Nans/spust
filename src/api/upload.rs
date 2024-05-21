@@ -1,0 +1,127 @@
+use std::ffi::OsStr;
+use std::path::Path;
+use std::sync::Arc;
+
+use axum::extract::{Extension, Multipart};
+use axum::response::{IntoResponse, Redirect};
+use log::{info, warn};
+use sha2::{Digest, Sha256};
+use tokio::fs;
+
+use crate::server::SpustConfig;
+
+struct Upload {
+    email: Option<String>,
+    password: Option<String>,
+    data: Option<Vec<u8>>,
+    file_name: Option<String>,
+    content_type: Option<String>,
+}
+
+fn make_sha(input: &str, num: usize) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(input);
+    let result = hasher.finalize();
+    let hash_string = hex::encode(result);
+    hash_string[..num].to_owned()
+}
+
+pub async fn upload_handler(
+    Extension(conf): Extension<Arc<SpustConfig>>,
+    mut multipart: Multipart,
+) -> impl IntoResponse {
+    let mut upload: Upload = Upload {
+        email: None,
+        password: None,
+        data: None,
+        file_name: None,
+        content_type: None,
+    };
+    loop {
+        let res = multipart.next_field().await;
+        match res {
+            Ok(value) => match value {
+                Some(field) => {
+                    let field_name = &field.name().unwrap_or("").to_owned();
+                    info!("{:?}", field_name);
+                    match field_name.as_str() {
+                        "email" => match field.bytes().await {
+                            Ok(bytes) => {
+                                if let Ok(decoded) = String::from_utf8(bytes.to_vec()) {
+                                    upload.email = Some(decoded);
+                                }
+                            }
+                            Err(e) => {
+                                println!("Error: {:?}", e);
+                                return Redirect::to("../send.html?error=email").into_response();
+                            }
+                        },
+                        "password" => match field.bytes().await {
+                            Ok(bytes) => {
+                                if let Ok(decoded) = String::from_utf8(bytes.to_vec()) {
+                                    upload.password = Some(decoded);
+                                }
+                            }
+                            Err(e) => {
+                                println!("Error: {:?}", e);
+                                return Redirect::to("../send.html?error=password").into_response();
+                            }
+                        },
+                        "file" => {
+                            if let Some(filename) = field.file_name() {
+                                upload.file_name = Some(filename.to_string());
+                            }
+                            if let Some(contenttype) = field.content_type() {
+                                upload.content_type = Some(contenttype.to_string())
+                            }
+                            if let Ok(bytes) = field.bytes().await {
+                                upload.data = Some(bytes.to_vec());
+                            }
+                        }
+                        _ => {
+                            warn!("{:?}", field_name);
+                        }
+                    }
+                }
+                None => break,
+            },
+            Err(e) => {
+                println!("Error: {:?}", e);
+                return Redirect::to("../send.html?error=all").into_response();
+            }
+        }
+    }
+    if upload.email.is_none() {
+        return Redirect::to("../send.html?error=email").into_response();
+    }
+    if upload.password.is_none() {
+        return Redirect::to("../send.html?error=password").into_response();
+    }
+    if upload.data.is_none() || upload.file_name.is_none() || upload.content_type.is_none() {
+        return Redirect::to("../send.html?error=file").into_response();
+    }
+
+    // TODO auth
+
+    // create filename
+    let file_name = upload.file_name.unwrap();
+    let extension = match Path::new(&file_name).extension().and_then(OsStr::to_str) {
+        Some(e) => e,
+        None => return Redirect::to("../send.html?error=file").into_response(),
+    };
+    let correct_filename = make_sha(&file_name, 8);
+    let time = chrono::offset::Local::now().timestamp() / 1000;
+    let complete_filename = format!("{}{}.{}", time, correct_filename, extension);
+
+    // save file
+    if let Err(_err) = fs::write(
+        Path::join(&conf.upload_dir, complete_filename),
+        upload.data.unwrap(),
+    )
+    .await
+    {
+        warn!("File not saved");
+        return Redirect::to("../send.html?error=save").into_response();
+    }
+    return Redirect::to("../send.html?success=true").into_response();
+}
