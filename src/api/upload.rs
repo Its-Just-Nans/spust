@@ -38,13 +38,15 @@ pub async fn upload_handler(
         content_type: None,
     };
     loop {
-        let res = multipart.next_field().await;
-        match res {
+        match multipart.next_field().await {
             Ok(value) => match value {
                 Some(field) => {
-                    let field_name = &field.name().unwrap_or("").to_owned();
+                    let field_name = match field.name() {
+                        Some(name) => name,
+                        None => "",
+                    };
                     info!("{:?}", field_name);
-                    match field_name.as_str() {
+                    match field_name {
                         "email" => match field.bytes().await {
                             Ok(bytes) => {
                                 if let Ok(decoded) = String::from_utf8(bytes.to_vec()) {
@@ -52,8 +54,7 @@ pub async fn upload_handler(
                                 }
                             }
                             Err(e) => {
-                                println!("Error: {:?}", e);
-                                return Redirect::to("../send.html?error=email").into_response();
+                                warn!("Error: {:?}", e);
                             }
                         },
                         "password" => match field.bytes().await {
@@ -63,8 +64,7 @@ pub async fn upload_handler(
                                 }
                             }
                             Err(e) => {
-                                println!("Error: {:?}", e);
-                                return Redirect::to("../send.html?error=password").into_response();
+                                warn!("Error: {:?}", e);
                             }
                         },
                         "file" => {

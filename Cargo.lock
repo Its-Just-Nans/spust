@@ -889,8 +889,11 @@ dependencies = [
  "env_logger",
  "hex",
  "log",
+ "mime",
+ "mime_guess",
  "sha2",
  "tokio",
+ "tokio-util",
  "tower-http",
 ]
 
