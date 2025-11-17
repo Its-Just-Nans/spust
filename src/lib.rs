@@ -1,7 +1,8 @@
-pub mod api;
+//! spust lib
 
-pub mod server;
-pub use server::create_app;
+mod api;
+mod errors;
+mod server;
+mod spust;
 
-pub mod spust;
-pub use spust::run_main;
+pub use spust::{run_main, SpustArgs};

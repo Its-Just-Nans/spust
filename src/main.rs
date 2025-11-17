@@ -1,7 +1,7 @@
 use clap_builder::Parser;
 use std::process::exit;
 
-use spust::{run_main, spust::SpustArgs};
+use spust::{run_main, SpustArgs};
 
 #[tokio::main]
 async fn main() {

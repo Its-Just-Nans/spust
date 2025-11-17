@@ -2,7 +2,8 @@ use clap::Parser;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 
-use crate::create_app;
+use crate::errors::SpustError;
+use crate::server::create_app;
 
 const DEFAULT_MAX_UPLOAD: usize = 1024 * 1024 * 10;
 
@@ -16,6 +17,10 @@ pub struct SpustArgs {
     #[arg(long, default_value = "files")]
     pub upload_dir: PathBuf,
 
+    /// Database file
+    #[arg(long, default_value = "spust.sqlite3")]
+    pub database_file: PathBuf,
+
     /// Maximum upload size in bytes
     #[arg(long, default_value_t = DEFAULT_MAX_UPLOAD)]
     pub max_upload_size: usize,
@@ -25,9 +30,9 @@ pub struct SpustArgs {
     pub port: u16,
 }
 
-pub async fn run_main(config: SpustArgs) -> Result<(), std::io::Error> {
+pub async fn run_main(config: SpustArgs) -> Result<(), SpustError> {
     let port = config.port;
-    let app = create_app(config);
+    let app = create_app(config).await?;
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
     let listener = tokio::net::TcpListener::bind(addr).await?;
     println!("Listening on http://{}", addr);
@@ -36,4 +41,5 @@ pub async fn run_main(config: SpustArgs) -> Result<(), std::io::Error> {
         app.into_make_service_with_connect_info::<SocketAddr>(),
     )
     .await
+    .map_err(|err| SpustError::new(err.to_string()))
 }
