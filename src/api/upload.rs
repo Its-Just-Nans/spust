@@ -41,10 +41,7 @@ pub async fn upload_handler(
         match multipart.next_field().await {
             Ok(value) => match value {
                 Some(field) => {
-                    let field_name = match field.name() {
-                        Some(name) => name,
-                        None => "",
-                    };
+                    let field_name = field.name().unwrap_or_default();
                     info!("{:?}", field_name);
                     match field_name {
                         "email" => match field.bytes().await {
@@ -97,14 +94,22 @@ pub async fn upload_handler(
     if upload.password.is_none() {
         return Redirect::to("../send.html?error=password").into_response();
     }
-    if upload.data.is_none() || upload.file_name.is_none() || upload.content_type.is_none() {
-        return Redirect::to("../send.html?error=file").into_response();
-    }
 
     // TODO auth
 
+    let data = match upload.data {
+        Some(d) => d,
+        None => return Redirect::to("../send.html?error=file").into_response(),
+    };
+    if upload.file_name.is_none() || upload.content_type.is_none() {
+        return Redirect::to("../send.html?error=file").into_response();
+    }
+
     // create filename
-    let file_name = upload.file_name.unwrap();
+    let file_name = match upload.file_name {
+        Some(e) => e,
+        None => return Redirect::to("../send.html?error=file").into_response(),
+    };
     let extension = match Path::new(&file_name).extension().and_then(OsStr::to_str) {
         Some(e) => e,
         None => return Redirect::to("../send.html?error=file").into_response(),
@@ -114,14 +119,9 @@ pub async fn upload_handler(
     let complete_filename = format!("{}{}.{}", time, correct_filename, extension);
 
     // save file
-    if let Err(_err) = fs::write(
-        Path::join(&conf.upload_dir, complete_filename),
-        upload.data.unwrap(),
-    )
-    .await
-    {
+    if let Err(_err) = fs::write(Path::join(&conf.upload_dir, complete_filename), data).await {
         warn!("File not saved");
         return Redirect::to("../send.html?error=save").into_response();
     }
-    return Redirect::to("../send.html?success=true").into_response();
+    Redirect::to("../send.html?success=true").into_response()
 }

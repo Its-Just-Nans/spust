@@ -11,7 +11,7 @@ use tokio_util::io::ReaderStream;
 use crate::server::SpustConfig;
 
 fn get_mime(filename: impl AsRef<Path>) -> mime::Mime {
-    return mime_guess::from_path(filename).first_or_octet_stream();
+    mime_guess::from_path(filename).first_or_octet_stream()
 }
 
 pub async fn tracker(
@@ -22,8 +22,8 @@ pub async fn tracker(
     // remove the first character '/t'
     let filename = &url[3..];
     println!("URL: {}", filename);
-    let content_type = get_mime(&filename);
-    let file = match tokio::fs::File::open(Path::join(&conf.upload_dir, &filename)).await {
+    let content_type = get_mime(filename);
+    let file = match tokio::fs::File::open(Path::join(&conf.upload_dir, filename)).await {
         Ok(file) => file,
         Err(err) => return Err((StatusCode::NOT_FOUND, format!("File not found: {}", err))),
     };
