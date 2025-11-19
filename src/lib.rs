@@ -5,4 +5,4 @@ mod errors;
 mod server;
 mod spust;
 
-pub use spust::{run_main, SpustArgs};
+pub use spust::SpustArgs;

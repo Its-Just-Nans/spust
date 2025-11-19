@@ -20,14 +20,14 @@ pub struct SpustConfig {
     pub db: Pool<Sqlite>,
 }
 
-pub async fn create_app(args: SpustArgs) -> Result<Router, SpustError> {
+pub async fn create_app(args: &SpustArgs) -> Result<Router, SpustError> {
     let SpustArgs {
         serve_dir,
         upload_dir,
         max_upload_size,
         database_file,
         ..
-    } = &args;
+    } = args;
     let db_options = SqliteConnectOptions::new()
         .filename(database_file)
         .create_if_missing(true);
