@@ -7,7 +7,7 @@ license = "MIT"
 description = "Analytics"
 homepage = "https://github.com/Its-Just-Nans/spust"
 repository = "https://github.com/Its-Just-Nans/spust"
-include = ["public/"]
+include = ["LICENSE", "**/*.rs", "public/", "Cargo.toml"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
